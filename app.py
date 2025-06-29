@@ -37,6 +37,21 @@ def add():
         return db_add(person)
     app.logger.error("Request body is empty")
     return Response(status=404)
+@app.route("/health")
+def health():
+    health_messages = []
+
+    try:
+        app.logger.info("Application is running")
+        health_messages.append("Application: Healthy")
+        status_code = 200
+    except Exception as e:
+        app.logger.error(f"Application health check failed: {e}")
+        health_messages.append("Application: Not Healthy")
+        status_code = 503
+
+    combined_health_status = "\n".join(health_messages)
+    return combined_health_status, status_code
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)

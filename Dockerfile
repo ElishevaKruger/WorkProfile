@@ -1,32 +1,35 @@
-FROM python:3.9-slim
+# ===================== STAGE 1 - Build =====================
+FROM python:3.9-slim AS builder
 
-# משתנים למניעת קבצי cache
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# התקנת תלות ל-mysqlclient
+# התקנת כלים הדרושים רק לבנייה
 RUN apt-get update && apt-get install -y \
     gcc \
     default-libmysqlclient-dev \
     pkg-config \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/*
 
-# תיקייה לעבודה
 WORKDIR /app
-
-# העתקת requirements
 COPY requirements.txt .
 
-# התקנת החבילות
-RUN pip install --no-cache-dir -r requirements.txt
+# מתקין את כל התלויות בסביבה נפרדת שנעתיק אחר כך
+RUN pip install --user --no-cache-dir -r requirements.txt
 
-# העתקת הקוד
+# ===================== STAGE 2 - Runtime =====================
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# נעתיק רק את התלויות מהשלב הקודם
+COPY --from=builder /root/.local /root/.local
+
+# נוודא שפייתון מוצא את ההתקנות האלו
+ENV PATH=/root/.local/bin:$PATH
+
+# נעתיק את כל קבצי האפליקציה
 COPY static/ static/
 COPY templates/ templates/
 COPY app.py dbcontext.py person.py ./
 
-EXPOSE 5000
-
+# הרצת האפליקציה
 CMD ["python", "app.py"]
 
